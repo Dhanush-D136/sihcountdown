@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function CompletionSection({ onOpenResetModal }) {
+export default function CompletionSection() {
   return (
     <div className="completion-container" id="completionContainer">
       <div className="completion-content">
@@ -12,11 +12,6 @@ export default function CompletionSection({ onOpenResetModal }) {
         <p className="completion-desc">24 HOURS OF INNOVATION COMPLETE</p>
         <div className="completion-college">
           Vel Tech High Tech Dr. Rangarajan Dr. Sakunthala Engineering College
-        </div>
-        <div className="completion-actions">
-          <button onClick={onOpenResetModal} className="control-btn control-btn-primary">
-            <i className="fa-solid fa-rotate"></i> RE-OPEN COUNTDOWN
-          </button>
         </div>
       </div>
     </div>

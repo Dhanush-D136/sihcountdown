@@ -4,6 +4,7 @@ export default function Header() {
   return (
     <header className="header-section" id="headerSection">
       <div className="branding-bar">
+        {/* Vel Tech Logo Container */}
         <div className="logo-box veltech-logo-box">
           <img
             src="/Vel_Tech_Logo_Clean.png"
@@ -14,10 +15,11 @@ export default function Header() {
 
         <div className="branding-divider">
           <div className="divider-line"></div>
-          <div className="divider-gem"></div>
+          <div className="divider-gem">✦</div>
           <div className="divider-line"></div>
         </div>
 
+        {/* SIH Logo Container */}
         <div className="logo-box sih-logo-box">
           <img
             src="/SIH_Logo_Clean.png"

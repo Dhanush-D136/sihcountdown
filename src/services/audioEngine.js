@@ -1,6 +1,6 @@
 /* ==========================================================================
-   SIH 2026 - PRELOADED AUDIO ENGINE & EVENT SOUND SYNTHESIZER
-   Instant 0ms inauguration sound playback & custom Web Audio API chimes.
+   SIH 2026 - STANDALONE AUDIO ENGINE & SYNTHESIZER (ZERO BACKEND)
+   Instant 0ms launch sound playback & browser-native Web Audio API chimes.
    ========================================================================== */
 
 let audioCtx = null;
@@ -43,7 +43,7 @@ export function getIsMuted() {
   return isMuted;
 }
 
-// Preload launch audio element & Web Audio buffer on initial page load
+// Preload static launch sound on initial page load
 export function preloadLaunchAudio() {
   if (isAudioPreloaded) return;
   isAudioPreloaded = true;
@@ -51,12 +51,11 @@ export function preloadLaunchAudio() {
   try {
     loadMuteState();
 
-    // 1. HTML5 Audio Element Preload with preload="auto"
+    // 1. HTML5 Audio Element Preload
     launchAudioElement = new Audio();
     launchAudioElement.preload = 'auto';
     launchAudioElement.src = '/Music/hackathon-launch.wav';
 
-    // Fallback error handler to try root path
     launchAudioElement.addEventListener('error', () => {
       if (launchAudioElement && launchAudioElement.src.includes('/Music/')) {
         launchAudioElement.src = '/hackathon-launch.wav';
@@ -65,7 +64,7 @@ export function preloadLaunchAudio() {
     });
     launchAudioElement.load();
 
-    // 2. Decode into Web Audio API buffer in parallel
+    // 2. Web Audio API Buffer Decode in parallel
     fetch('/Music/hackathon-launch.wav')
       .then(res => {
         if (!res.ok) return fetch('/hackathon-launch.wav');
@@ -89,14 +88,13 @@ export function playLaunchCeremonySound() {
 
   const ctx = getAudioContext();
 
-  // 1. Play preloaded HTML5 audio element immediately (0ms response)
+  // 1. Play preloaded HTML5 audio element immediately (0ms)
   if (launchAudioElement) {
     try {
       launchAudioElement.currentTime = 0;
       const playPromise = launchAudioElement.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // If browser restricted HTML5 playback, fallback to Web Audio API
           playWebAudioBuffer(ctx);
         });
       }
@@ -107,7 +105,7 @@ export function playLaunchCeremonySound() {
     playWebAudioBuffer(ctx);
   }
 
-  // 2. Synthesize deep bass drop & brass synth chords
+  // 2. Synthesize deep bass & brass synth chords
   if (ctx) {
     synthesizeLaunchChords(ctx);
   }
@@ -201,38 +199,6 @@ export function playTickSound() {
 
   osc.start();
   osc.stop(ctx.currentTime + 0.03);
-}
-
-export function playAnnouncementChime(priority = 'NORMAL') {
-  if (isMuted) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
-
-  const now = ctx.currentTime;
-
-  let notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-  if (priority === 'IMPORTANT') {
-    notes = [523.25, 659.25, 783.99, 1046.50];
-  } else if (priority === 'URGENT') {
-    notes = [659.25, 783.99, 1046.50, 1318.51];
-  }
-
-  notes.forEach((freq, idx) => {
-    const chimeOsc = ctx.createOscillator();
-    const chimeGain = ctx.createGain();
-    chimeOsc.type = 'sine';
-    chimeOsc.frequency.setValueAtTime(freq, now + 0.1 + idx * 0.12);
-
-    chimeGain.gain.setValueAtTime(0, now + 0.1 + idx * 0.12);
-    chimeGain.gain.linearRampToValueAtTime(0.18, now + 0.1 + idx * 0.12 + 0.03);
-    chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1 + idx * 0.12 + 1.2);
-
-    chimeOsc.connect(chimeGain);
-    chimeGain.connect(ctx.destination);
-
-    chimeOsc.start(now + 0.1 + idx * 0.12);
-    chimeOsc.stop(now + 0.1 + idx * 0.12 + 1.2);
-  });
 }
 
 export function playVictoryFanfare() {

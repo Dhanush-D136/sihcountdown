@@ -7,8 +7,6 @@ export default function PrelaunchSection({ onStartClick }) {
     e.preventDefault();
     if (isStarting) return;
     setIsStarting(true);
-
-    // Call instant start callback
     onStartClick();
   };
 
@@ -17,7 +15,7 @@ export default function PrelaunchSection({ onStartClick }) {
       <h2 className="prelaunch-title">
         <span className="title-glow">THE COUNTDOWN</span> BEGINS
       </h2>
-      <p class="prelaunch-description">
+      <p className="prelaunch-description">
         24 Hours of Non-Stop Coding, Problem Solving, & Prototype Development
       </p>
 

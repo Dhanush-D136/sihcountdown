@@ -6,7 +6,7 @@ function pad2(num) {
 
 function formatTimeOfDay(ts) {
   if (!ts) return '--:--';
-  const d = new Date(ts * 1000);
+  const d = new Date(ts);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
@@ -98,7 +98,7 @@ export default function CountdownSection({
         </div>
       </div>
 
-      {/* Progress Bar */}
+      {/* Dynamic Progress Bar */}
       <div className="progress-bar-wrapper">
         <div className="progress-info">
           <span className="progress-label">

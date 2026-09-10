@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import BackgroundCanvas from './components/BackgroundCanvas';
 import FXCanvas from './components/FXCanvas';
 import Header from './components/Header';
@@ -6,9 +6,7 @@ import ControlBar from './components/ControlBar';
 import PrelaunchSection from './components/PrelaunchSection';
 import CountdownSection from './components/CountdownSection';
 import CompletionSection from './components/CompletionSection';
-import AnnouncementOverlay from './components/AnnouncementOverlay';
 import LiveClockWidget from './components/LiveClockWidget';
-import ResetModal from './components/ResetModal';
 
 import {
   preloadLaunchAudio,
@@ -17,25 +15,19 @@ import {
   playVictoryFanfare,
   loadMuteState,
   setMuted as setAudioMuted,
-  getIsMuted,
 } from './services/audioEngine';
 import { triggerLaunchCeremony, triggerCompletionCeremony } from './services/fxEngine';
-import { fetchEventStatus, startEventAsync, initSSEStream } from './services/api';
-
-// Lazy load Admin Panel components for code splitting & minimal public bundle size
-const AdminLogin = lazy(() => import('./admin/AdminLogin'));
-const AdminDashboard = lazy(() => import('./admin/AdminDashboard'));
+import { getStoredEventState, saveStoredEventState } from './services/storage';
 
 export default function App() {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
-  const [adminUser, setAdminUser] = useState(null);
+  const [eventState, setEventState] = useState(() => getStoredEventState());
+  const [status, setStatus] = useState(() => {
+    const st = getStoredEventState();
+    return st.status || 'NOT_STARTED';
+  });
 
-  // Application State
-  const [serverState, setServerState] = useState(null);
-  const [status, setStatus] = useState('NOT_STARTED'); // NOT_STARTED, LAUNCHING, RUNNING, PAUSED, COMPLETED
   const [isMuted, setIsMuted] = useState(false);
   const [isEventMode, setIsEventMode] = useState(false);
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   // Timer Digits
   const [hours, setHours] = useState(24);
@@ -43,52 +35,38 @@ export default function App() {
   const [seconds, setSeconds] = useState(0);
   const [progressPercent, setProgressPercent] = useState(0);
 
-  // Offsets & Trackers
-  const serverClockOffsetRef = useRef(0);
   const lastDisplayedSecRef = useRef(null);
+  const completionTriggeredRef = useRef(false);
 
-  // Synchronize view state when server updates arrive
-  const renderState = (state) => {
-    if (!state) return;
-    setServerState(state);
+  // 1. Initial audio preloading & state restoration
+  useEffect(() => {
+    preloadLaunchAudio();
+    setIsMuted(loadMuteState());
 
-    if (state.server_time) {
-      const clientNow = Date.now() / 1000;
-      serverClockOffsetRef.current = state.server_time - clientNow;
-    }
+    const initialSt = getStoredEventState();
+    setEventState(initialSt);
+    setStatus(initialSt.status);
+  }, []);
 
-    if (state.status === 'RUNNING') {
-      setStatus('RUNNING');
-    } else if (state.status === 'PAUSED') {
-      setStatus('PAUSED');
-    } else if (state.status === 'COMPLETED') {
-      setStatus('COMPLETED');
-    } else if (status !== 'LAUNCHING') {
-      setStatus('NOT_STARTED');
-    }
-  };
-
-  // High-precision high-frequency 50ms tick loop
+  // 2. High-precision 50ms timestamp-based countdown calculation loop
   useEffect(() => {
     const tickLoop = () => {
-      if (!serverState && status !== 'LAUNCHING') return;
-
-      const currentStatus = serverState ? serverState.status : status;
-      const duration = (serverState && serverState.duration_seconds) || 86400;
-      const clientNowSec = Date.now() / 1000;
-      const nowServerSec = clientNowSec + serverClockOffsetRef.current;
-
-      let remainingFloat = duration;
-      if (currentStatus === 'RUNNING' && serverState && serverState.target_timestamp) {
-        remainingFloat = Math.max(0, serverState.target_timestamp - nowServerSec);
-      } else if (currentStatus === 'LAUNCHING' && serverState && serverState.start_timestamp) {
-        remainingFloat = Math.max(0, (serverState.start_timestamp + duration) - nowServerSec);
-      } else if (currentStatus === 'PAUSED' && serverState) {
-        remainingFloat = serverState.remaining_seconds || 0;
-      } else if (currentStatus === 'COMPLETED') {
-        remainingFloat = 0;
+      if (status !== 'RUNNING' && status !== 'COMPLETED') {
+        setHours(24);
+        setMinutes(0);
+        setSeconds(0);
+        setProgressPercent(0);
+        return;
       }
 
+      const duration = (eventState && eventState.durationSeconds) || 86400;
+      const endTs = eventState && eventState.eventEndAt;
+
+      if (!endTs) return;
+
+      const nowMs = Date.now();
+      const remainingMs = Math.max(0, endTs - nowMs);
+      const remainingFloat = remainingMs / 1000;
       const remainingInt = Math.ceil(remainingFloat);
 
       if (remainingInt !== lastDisplayedSecRef.current) {
@@ -101,65 +79,71 @@ export default function App() {
         setMinutes(m);
         setSeconds(s);
 
-        if (currentStatus === 'RUNNING' || currentStatus === 'LAUNCHING') {
+        if (status === 'RUNNING' && remainingInt > 0) {
           playTickSound();
         }
       }
 
-      if (currentStatus === 'RUNNING' || currentStatus === 'PAUSED' || currentStatus === 'COMPLETED' || currentStatus === 'LAUNCHING') {
-        const elapsed = Math.max(0, duration - remainingFloat);
-        const pct = Math.min(100, Math.max(0, (elapsed / duration) * 100));
-        setProgressPercent(pct);
+      const elapsedMs = Math.max(0, (duration * 1000) - remainingMs);
+      const pct = Math.min(100, Math.max(0, (elapsedMs / (duration * 1000)) * 100));
+      setProgressPercent(pct);
+
+      // Handle Natural Completion at 00:00:00
+      if (status === 'RUNNING' && remainingMs <= 0) {
+        setStatus('COMPLETED');
+        const newState = {
+          ...eventState,
+          status: 'COMPLETED',
+        };
+        setEventState(newState);
+        saveStoredEventState(newState);
+
+        if (!completionTriggeredRef.current) {
+          completionTriggeredRef.current = true;
+          triggerCompletionCeremony();
+          playVictoryFanfare();
+        }
       }
     };
 
     const interval = setInterval(tickLoop, 50);
     return () => clearInterval(interval);
-  }, [serverState, status]);
+  }, [eventState, status]);
 
-  // Initial setup & Audio preloading
-  useEffect(() => {
-    preloadLaunchAudio();
-    setIsMuted(loadMuteState());
-
-    fetchEventStatus().then((st) => renderState(st));
-    const cleanupSSE = initSSEStream((st) => renderState(st));
-
-    const handlePopState = () => setCurrentPath(window.location.pathname);
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      cleanupSSE();
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, []);
-
-  // INSTANT CLIENT START HANDLER (0ms visual delay)
+  // 3. INSTANT CLIENT START HANDLER (0ms response, zero backend dependency)
   const handleStartClick = () => {
-    // 1. Immediately (0ms) trigger sound playback & visual launch ceremony
+    // A. Play opening sound immediately (0ms)
     playLaunchCeremonySound();
-    setStatus('LAUNCHING');
 
-    triggerLaunchCeremony(() => {
-      setStatus((prev) => (prev === 'LAUNCHING' ? 'RUNNING' : prev));
-    });
+    // B. Trigger visual opening ceremony (Poppers, Confetti, Sparks, Fireworks, Flash) immediately (0ms)
+    triggerLaunchCeremony();
 
-    // 2. In parallel: send asynchronous start request to backend API
-    startEventAsync().then((res) => {
-      if (res && res.event) {
-        renderState(res.event);
-      }
-    });
+    // C. Calculate local start & end timestamps (24 Hours)
+    const nowMs = Date.now();
+    const durationSec = 86400; // 24 Hours
+    const endMs = nowMs + (durationSec * 1000);
+
+    const newEventState = {
+      status: 'RUNNING',
+      eventStartedAt: nowMs,
+      eventEndAt: endMs,
+      durationSeconds: durationSec,
+    };
+
+    // D. Persist to localStorage across refreshes
+    saveStoredEventState(newEventState);
+    setEventState(newEventState);
+    setStatus('RUNNING');
   };
 
-  // Toggle Sound
+  // Sound Toggle
   const handleToggleSound = () => {
     const nextMuted = !isMuted;
     setAudioMuted(nextMuted);
     setIsMuted(nextMuted);
   };
 
-  // Toggle Fullscreen Event Mode
+  // Fullscreen Event Mode Toggle
   const handleToggleEventMode = () => {
     const nextMode = !isEventMode;
     setIsEventMode(nextMode);
@@ -176,36 +160,22 @@ export default function App() {
     }
   };
 
-  // Check Admin Routes
-  if (currentPath.startsWith('/admin')) {
-    return (
-      <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#00f2fe' }}>Loading Command Center...</div>}>
-        {adminUser ? (
-          <AdminDashboard username={adminUser} onLogout={() => setAdminUser(null)} />
-        ) : (
-          <AdminLogin onLoginSuccess={(name) => setAdminUser(name)} />
-        )}
-      </Suspense>
-    );
-  }
-
   return (
     <>
-      {/* Canvas Layers & Background FX */}
+      {/* Canvas Layers & Ambient Background FX */}
       <BackgroundCanvas />
       <FXCanvas />
 
-      {/* Top Floating Control Bar */}
+      {/* Top Floating Control Toolbar */}
       <ControlBar
         status={status}
         isMuted={isMuted}
         onToggleSound={handleToggleSound}
         isEventMode={isEventMode}
         onToggleEventMode={handleToggleEventMode}
-        onOpenResetModal={() => setIsResetModalOpen(true)}
       />
 
-      {/* Main Content Layout Container */}
+      {/* Main Web Content Layout */}
       <main className="main-wrapper" id="mainWrapper">
         <Header />
 
@@ -227,26 +197,26 @@ export default function App() {
             </div>
           </div>
 
-          {/* PRE-LAUNCH STATE */}
+          {/* INITIAL PRE-LAUNCH STATE */}
           {status === 'NOT_STARTED' && (
             <PrelaunchSection onStartClick={handleStartClick} />
           )}
 
-          {/* ACTIVE COUNTDOWN STATE (LAUNCHING or RUNNING or PAUSED) */}
-          {(status === 'LAUNCHING' || status === 'RUNNING' || status === 'PAUSED') && (
+          {/* ACTIVE 24-HOUR COUNTDOWN STATE */}
+          {status === 'RUNNING' && (
             <CountdownSection
               hours={hours}
               minutes={minutes}
               seconds={seconds}
               progressPercent={progressPercent}
-              startTimestamp={serverState ? serverState.start_timestamp : null}
-              targetTimestamp={serverState ? serverState.target_timestamp : null}
+              startTimestamp={eventState ? eventState.eventStartedAt : null}
+              targetTimestamp={eventState ? eventState.eventEndAt : null}
             />
           )}
 
           {/* COMPLETION STATE */}
           {status === 'COMPLETED' && (
-            <CompletionSection onOpenResetModal={() => setIsResetModalOpen(true)} />
+            <CompletionSection />
           )}
         </section>
 
@@ -284,15 +254,7 @@ export default function App() {
         </footer>
       </main>
 
-      {/* Realtime Announcement Overlay */}
-      {serverState && serverState.active_announcement && (
-        <AnnouncementOverlay announcement={serverState.active_announcement} />
-      )}
-
-      {/* Admin Reset Modal */}
-      <ResetModal isOpen={isResetModalOpen} onClose={() => setIsResetModalOpen(false)} />
-
-      {/* Live Bottom-Right Date & Time Clock Widget */}
+      {/* Subdued Bottom-Right Local Clock Widget */}
       <LiveClockWidget />
     </>
   );
