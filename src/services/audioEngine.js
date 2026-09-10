@@ -1,6 +1,6 @@
 /* ==========================================================================
    SIH 2026 - STANDALONE AUDIO ENGINE & SYNTHESIZER (ZERO BACKEND)
-   Instant 0ms launch sound playback & browser-native Web Audio API chimes.
+   Instant 0ms launch sound playback connected to discovered static audio.
    ========================================================================== */
 
 let audioCtx = null;
@@ -51,21 +51,36 @@ export function preloadLaunchAudio() {
   try {
     loadMuteState();
 
+    // Discovered audio file path
+    const primaryAudioPath = '/Music/The_Moment_of_Activation (1).mp3';
+    const fallbackPaths = [
+      '/Music/The_Moment_of_Activation.mp3',
+      '/The_Moment_of_Activation.mp3',
+      '/Music/hackathon-launch.wav',
+      '/hackathon-launch.wav'
+    ];
+
     // 1. HTML5 Audio Element Preload
     launchAudioElement = new Audio();
     launchAudioElement.preload = 'auto';
-    launchAudioElement.src = '/Music/hackathon-launch.wav';
+    launchAudioElement.src = primaryAudioPath;
 
+    let fallbackIndex = 0;
     launchAudioElement.addEventListener('error', () => {
-      if (launchAudioElement && launchAudioElement.src.includes('/Music/')) {
-        launchAudioElement.src = '/hackathon-launch.wav';
+      if (fallbackIndex < fallbackPaths.length) {
+        launchAudioElement.src = fallbackPaths[fallbackIndex];
+        fallbackIndex++;
         launchAudioElement.load();
       }
     });
     launchAudioElement.load();
 
-    // 2. Web Audio API Buffer Decode in parallel
-    fetch('/Music/hackathon-launch.wav')
+    // 2. Web Audio API Buffer Decode in parallel for instant 0ms fallback
+    fetch(primaryAudioPath)
+      .then(res => {
+        if (!res.ok) return fetch('/Music/The_Moment_of_Activation.mp3');
+        return res;
+      })
       .then(res => {
         if (!res.ok) return fetch('/hackathon-launch.wav');
         return res;
@@ -105,7 +120,7 @@ export function playLaunchCeremonySound() {
     playWebAudioBuffer(ctx);
   }
 
-  // 2. Synthesize deep bass & brass synth chords
+  // 2. Synthesize deep bass drop & brass synth chords
   if (ctx) {
     synthesizeLaunchChords(ctx);
   }

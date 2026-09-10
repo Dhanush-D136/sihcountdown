@@ -40,11 +40,24 @@
     return isMuted;
   }
 
+  let launchAudioElement = null;
+
   function preloadLaunchAudio() {
     try {
-      fetch('hackathon-launch.wav')
+      const primaryAudioPath = '/Music/The_Moment_of_Activation (1).mp3';
+      
+      launchAudioElement = new Audio();
+      launchAudioElement.preload = 'auto';
+      launchAudioElement.src = primaryAudioPath;
+      launchAudioElement.load();
+
+      fetch(primaryAudioPath)
         .then(res => {
-          if (!res.ok) return fetch('public/audio/hackathon-launch.wav');
+          if (!res.ok) return fetch('/Music/The_Moment_of_Activation.mp3');
+          return res;
+        })
+        .then(res => {
+          if (!res.ok) return fetch('hackathon-launch.wav');
           return res;
         })
         .then(res => res.arrayBuffer())
@@ -85,9 +98,28 @@
   function playLaunchCeremonySound() {
     if (isMuted) return;
     const ctx = getAudioContext();
-    if (!ctx) return;
 
-    if (launchAudioBuffer) {
+    if (launchAudioElement) {
+      try {
+        launchAudioElement.currentTime = 0;
+        const playPromise = launchAudioElement.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            if (ctx && launchAudioBuffer) {
+              try {
+                const source = ctx.createBufferSource();
+                source.buffer = launchAudioBuffer;
+                const gainNode = ctx.createGain();
+                gainNode.gain.setValueAtTime(0.75, ctx.currentTime);
+                source.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                source.start(0);
+              } catch (e) {}
+            }
+          });
+        }
+      } catch (e) {}
+    } else if (ctx && launchAudioBuffer) {
       try {
         const source = ctx.createBufferSource();
         source.buffer = launchAudioBuffer;
@@ -99,6 +131,7 @@
       } catch (e) {}
     }
 
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     const subOsc = ctx.createOscillator();
