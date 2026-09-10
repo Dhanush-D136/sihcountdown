@@ -9,6 +9,7 @@
   let audioCtx = null;
   let isMuted = true;
   let launchAudioBuffer = null;
+  let launchAudioElement = null;
 
   function getAudioContext() {
     if (!audioCtx) {
@@ -40,11 +41,9 @@
     return isMuted;
   }
 
-  let launchAudioElement = null;
-
   function preloadLaunchAudio() {
     try {
-      const primaryAudioPath = '/Music/The_Moment_of_Activation (1).mp3';
+      const primaryAudioPath = '/Music/start-launch-v2.mp3?v=20260910_v2';
       
       launchAudioElement = new Audio();
       launchAudioElement.preload = 'auto';
@@ -53,11 +52,7 @@
 
       fetch(primaryAudioPath)
         .then(res => {
-          if (!res.ok) return fetch('/Music/The_Moment_of_Activation.mp3');
-          return res;
-        })
-        .then(res => {
-          if (!res.ok) return fetch('hackathon-launch.wav');
+          if (!res.ok) return fetch('/Music/12%20Raja%20Raja%20Chozhan.mp3?v=20260910_v2');
           return res;
         })
         .then(res => res.arrayBuffer())
@@ -101,6 +96,7 @@
 
     if (launchAudioElement) {
       try {
+        launchAudioElement.pause();
         launchAudioElement.currentTime = 0;
         const playPromise = launchAudioElement.play();
         if (playPromise !== undefined) {
@@ -146,19 +142,6 @@
     subOsc.start(now);
     subOsc.stop(now + 0.6);
 
-    const whooshOsc = ctx.createOscillator();
-    const whooshGain = ctx.createGain();
-    whooshOsc.type = 'sawtooth';
-    whooshOsc.frequency.setValueAtTime(120, now + 0.08);
-    whooshOsc.frequency.exponentialRampToValueAtTime(1400, now + 0.40);
-    whooshGain.gain.setValueAtTime(0.01, now + 0.08);
-    whooshGain.gain.linearRampToValueAtTime(0.22, now + 0.35);
-    whooshGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-    whooshOsc.connect(whooshGain);
-    whooshGain.connect(ctx.destination);
-    whooshOsc.start(now + 0.08);
-    whooshOsc.stop(now + 0.45);
-
     const chordFreqs = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
     chordFreqs.forEach((freq, idx) => {
       const brassOsc = ctx.createOscillator();
@@ -175,26 +158,8 @@
       brassOsc.start(now + 0.32);
       brassOsc.stop(now + 1.8);
     });
-
-    const shimmerNotes = [1046.50, 1318.51, 1567.98, 2093.00, 2637.02];
-    shimmerNotes.forEach((freq, idx) => {
-      const shimOsc = ctx.createOscillator();
-      const shimGain = ctx.createGain();
-      shimOsc.type = 'sine';
-      shimOsc.frequency.setValueAtTime(freq, now + 0.48 + idx * 0.06);
-
-      shimGain.gain.setValueAtTime(0, now + 0.48 + idx * 0.06);
-      shimGain.gain.linearRampToValueAtTime(0.08, now + 0.48 + idx * 0.06 + 0.02);
-      shimGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48 + idx * 0.06 + 0.6);
-
-      shimOsc.connect(shimGain);
-      shimGain.connect(ctx.destination);
-      shimOsc.start(now + 0.48 + idx * 0.06);
-      shimOsc.stop(now + 0.48 + idx * 0.06 + 0.6);
-    });
   }
 
-  // 5. Short Professional Attention Chime for Live Event Announcements
   function playAnnouncementChime(priority = 'NORMAL') {
     if (isMuted) return;
     const ctx = getAudioContext();
@@ -202,21 +167,7 @@
 
     const now = ctx.currentTime;
 
-    // Soft low impact base
-    const baseOsc = ctx.createOscillator();
-    const baseGain = ctx.createGain();
-    baseOsc.type = 'sine';
-    baseOsc.frequency.setValueAtTime(130, now);
-    baseOsc.frequency.exponentialRampToValueAtTime(65, now + 0.4);
-    baseGain.gain.setValueAtTime(0.2, now);
-    baseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-    baseOsc.connect(baseGain);
-    baseGain.connect(ctx.destination);
-    baseOsc.start(now);
-    baseOsc.stop(now + 0.4);
-
-    // Chime notes based on priority
-    let notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+    let notes = [523.25, 659.25, 783.99];
     if (priority === 'IMPORTANT') {
       notes = [523.25, 659.25, 783.99, 1046.50];
     } else if (priority === 'URGENT') {

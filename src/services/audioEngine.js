@@ -1,6 +1,6 @@
 /* ==========================================================================
    SIH 2026 - STANDALONE AUDIO ENGINE & SYNTHESIZER (ZERO BACKEND)
-   Instant 0ms launch sound playback connected to discovered static audio.
+   Instant 0ms launch sound playback connected to NEW static audio file.
    ========================================================================== */
 
 let audioCtx = null;
@@ -43,7 +43,7 @@ export function getIsMuted() {
   return isMuted;
 }
 
-// Preload static launch sound on initial page load
+// Preload NEW static launch sound on initial page load with cache-busting versioning
 export function preloadLaunchAudio() {
   if (isAudioPreloaded) return;
   isAudioPreloaded = true;
@@ -51,13 +51,11 @@ export function preloadLaunchAudio() {
   try {
     loadMuteState();
 
-    // Discovered audio file path
-    const primaryAudioPath = '/Music/The_Moment_of_Activation (1).mp3';
+    // Cache-busting URL pointing strictly to the NEW audio file (12 Raja Raja Chozhan.mp3)
+    const primaryAudioPath = '/Music/start-launch-v2.mp3?v=20260910_v2';
     const fallbackPaths = [
-      '/Music/The_Moment_of_Activation.mp3',
-      '/The_Moment_of_Activation.mp3',
-      '/Music/hackathon-launch.wav',
-      '/hackathon-launch.wav'
+      '/Music/12%20Raja%20Raja%20Chozhan.mp3?v=20260910_v2',
+      '/start-launch-v2.mp3?v=20260910_v2'
     ];
 
     // 1. HTML5 Audio Element Preload
@@ -75,14 +73,10 @@ export function preloadLaunchAudio() {
     });
     launchAudioElement.load();
 
-    // 2. Web Audio API Buffer Decode in parallel for instant 0ms fallback
+    // 2. Web Audio API Buffer Decode in parallel for instant 0ms playback fallback
     fetch(primaryAudioPath)
       .then(res => {
-        if (!res.ok) return fetch('/Music/The_Moment_of_Activation.mp3');
-        return res;
-      })
-      .then(res => {
-        if (!res.ok) return fetch('/hackathon-launch.wav');
+        if (!res.ok) return fetch('/Music/12%20Raja%20Raja%20Chozhan.mp3?v=20260910_v2');
         return res;
       })
       .then(res => res.arrayBuffer())
@@ -103,9 +97,10 @@ export function playLaunchCeremonySound() {
 
   const ctx = getAudioContext();
 
-  // 1. Play preloaded HTML5 audio element immediately (0ms)
+  // 1. Stop any currently playing audio instance
   if (launchAudioElement) {
     try {
+      launchAudioElement.pause();
       launchAudioElement.currentTime = 0;
       const playPromise = launchAudioElement.play();
       if (playPromise !== undefined) {
