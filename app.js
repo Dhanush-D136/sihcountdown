@@ -330,24 +330,40 @@
     }
   }
 
-  // 10. Public START HACKATHON Button — NO PASSWORD REQUIRED FOR INITIAL START!
-  async function initiatePublicLaunch() {
-    // Play inauguration sound & trigger particle/confetti visual ceremony immediately
+  // 10. Public START HACKATHON Button — INSTANT CLIENT RESPONSE (0ms DELAY)
+  function initiatePublicLaunch() {
+    // 1. Play inauguration sound & update button state to STARTING... immediately (0ms)
     window.AudioEngine.playLaunchCeremonySound();
 
-    // Disable start button to prevent double-clicks
-    startBtn.style.pointerEvents = 'none';
-    startBtn.style.opacity = '0.5';
+    if (startBtn) {
+      startBtn.style.pointerEvents = 'none';
+      startBtn.style.opacity = '0.7';
+      const mainText = startBtn.querySelector('.btn-main-text');
+      if (mainText) mainText.textContent = 'STARTING...';
+      const icon = startBtn.querySelector('.btn-icon');
+      if (icon) icon.className = 'fa-solid fa-spinner fa-spin btn-icon';
+    }
 
-    // Initiate official server-side event start timestamp via public_start API
-    try {
-      await fetch('/api/event/public_start', { method: 'POST' });
-    } catch (e) {}
-
-    // Trigger visual launch ceremony (Poppers, Confetti, Ambient Glow) over dark background
+    // 2. Trigger visual launch ceremony (Poppers, Confetti, Ambient Glow) over dark background immediately
     window.FXEngine.triggerLaunchCeremony(() => {
       fetchServerState();
     });
+
+    // 3. Initiate official server-side event start timestamp asynchronously (in parallel)
+    try {
+      fetch('/api/events/start', { method: 'POST' })
+        .then(res => {
+          if (!res.ok) return fetch('/api/event/public_start', { method: 'POST' });
+          return res;
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.event) {
+            renderState(data.event);
+          }
+        })
+        .catch(() => {});
+    } catch (e) {}
   }
 
   // 11. Premium Reset Confirmation Modal Display (ADMIN ONLY AFTER START)

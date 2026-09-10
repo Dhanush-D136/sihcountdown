@@ -229,6 +229,20 @@ def scheduled_announcement_worker():
 scheduler_thread = threading.Thread(target=scheduled_announcement_worker, daemon=True)
 scheduler_thread.start()
 
+# CORS Header Support for Vercel Frontend
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+# Handle preflight OPTIONS requests for all API routes
+@app.route('/api/<path:dummy>', methods=['OPTIONS'])
+def options_preflight(dummy):
+    return '', 200
+
 # ==========================================================================
 # PUBLIC API ENDPOINTS
 # ==========================================================================
@@ -240,6 +254,7 @@ def get_public_event_status():
 
 # Public Start Endpoint: Allows initiating the event from NOT_STARTED without requiring a password!
 @app.route('/api/event/public_start', methods=['POST'])
+@app.route('/api/events/start', methods=['POST'])
 def public_start_event():
     state = calculate_event_state()
     if state['status'] != 'NOT_STARTED':
