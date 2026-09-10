@@ -538,9 +538,9 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.8rem;
+  gap: 1.4rem;
   width: 100%;
-  max-width: 950px;
+  max-width: 800px;
   margin: 0 auto;
   animation: zoomIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -549,33 +549,33 @@ html, body, #root {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.2rem;
+  gap: 1rem;
   width: 100%;
 }
 
 .timer-colon {
   font-family: var(--font-digits);
-  font-size: clamp(2.5rem, 5.5vw, 4.5rem);
+  font-size: clamp(2rem, 4.2vw, 3.5rem);
   font-weight: 800;
   color: var(--accent-cyan);
   opacity: 0.8;
-  text-shadow: 0 0 16px var(--accent-cyan);
+  text-shadow: 0 0 14px var(--accent-cyan);
   animation: colonBlink 1s infinite alternate cubic-bezier(0.4, 0, 0.6, 1);
-  margin-top: -1rem;
+  margin-top: -0.6rem;
 }
 
 @keyframes colonBlink {
   0% { opacity: 0.3; text-shadow: 0 0 5px var(--accent-cyan); }
-  100% { opacity: 1; text-shadow: 0 0 20px var(--accent-cyan); }
+  100% { opacity: 1; text-shadow: 0 0 16px var(--accent-cyan); }
 }
 
 .timer-card {
   position: relative;
   flex: 1;
-  max-width: 260px;
-  min-width: 160px;
-  height: 190px;
-  border-radius: 22px;
+  max-width: 210px;
+  min-width: 140px;
+  height: 155px;
+  border-radius: 20px;
   perspective: 1000px;
   display: flex;
   align-items: center;
@@ -586,7 +586,7 @@ html, body, #root {
 .card-glass-bg {
   position: absolute;
   inset: 0;
-  border-radius: 22px;
+  border-radius: 20px;
   background: var(--bg-card);
   border: 1px solid var(--glass-border);
   backdrop-filter: var(--glass-blur);
@@ -598,7 +598,7 @@ html, body, #root {
 .card-glow {
   position: absolute;
   inset: -1px;
-  border-radius: 22px;
+  border-radius: 20px;
   background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(121, 40, 202, 0.2));
   opacity: 0.4;
   z-index: 0;
@@ -609,7 +609,7 @@ html, body, #root {
 .timer-card:hover .card-glass-bg {
   background: var(--bg-card-hover);
   border-color: rgba(0, 242, 254, 0.4);
-  transform: translateY(-4px) scale(1.02);
+  transform: translateY(-3px) scale(1.02);
 }
 
 .card-body {
@@ -619,13 +619,13 @@ html, body, #root {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
   width: 100%;
 }
 
 .digit-wrapper {
   overflow: hidden;
-  height: clamp(3.2rem, 7vw, 5.5rem);
+  height: clamp(2.6rem, 4.8vw, 4.2rem);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -633,12 +633,12 @@ html, body, #root {
 
 .digit {
   font-family: var(--font-digits);
-  font-size: clamp(3.2rem, 7vw, 5.5rem);
+  font-size: clamp(2.6rem, 4.8vw, 4.2rem);
   font-weight: 800;
   line-height: 1;
   color: #ffffff;
   letter-spacing: -0.02em;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 242, 254, 0.3);
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 242, 254, 0.3);
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
