@@ -6,6 +6,7 @@ export default function ControlBar({
   onToggleSound,
   isEventMode,
   onToggleEventMode,
+  onResetTimer,
 }) {
   let statusText = 'PRE-LAUNCH STATE';
   let statusDotClass = 'status-dot';
@@ -21,6 +22,17 @@ export default function ControlBar({
   return (
     <div className="control-bar" id="controlBar">
       <div className="control-left">
+        <button
+          onClick={onResetTimer}
+          className="control-btn control-btn-subtle"
+          title="Reset Timer to Initial Pre-Launch State"
+          aria-label="Reset Timer"
+          style={{ padding: '0.35rem 0.75rem' }}
+        >
+          <i className="fa-solid fa-rotate-left"></i>
+          <span className="btn-text">RESET</span>
+        </button>
+
         <span className="status-badge" id="headerStatusBadge">
           <span className={statusDotClass}></span>
           <span id="headerStatusText">{statusText}</span>

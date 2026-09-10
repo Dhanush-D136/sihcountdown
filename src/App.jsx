@@ -17,7 +17,7 @@ import {
   setMuted as setAudioMuted,
 } from './services/audioEngine';
 import { triggerLaunchCeremony, triggerCompletionCeremony } from './services/fxEngine';
-import { getStoredEventState, saveStoredEventState } from './services/storage';
+import { getStoredEventState, saveStoredEventState, clearStoredEventState } from './services/storage';
 
 export default function App() {
   const [eventState, setEventState] = useState(() => getStoredEventState());
@@ -37,6 +37,25 @@ export default function App() {
 
   const lastDisplayedSecRef = useRef(null);
   const completionTriggeredRef = useRef(false);
+
+  // Reset Timer to Prelaunch State
+  const handleResetTimer = () => {
+    clearStoredEventState();
+    const defaultState = {
+      status: 'NOT_STARTED',
+      eventStartedAt: null,
+      eventEndAt: null,
+      durationSeconds: 86400,
+    };
+    setEventState(defaultState);
+    setStatus('NOT_STARTED');
+    setHours(24);
+    setMinutes(0);
+    setSeconds(0);
+    setProgressPercent(0);
+    completionTriggeredRef.current = false;
+    lastDisplayedSecRef.current = null;
+  };
 
   // 1. Initial audio preloading & state restoration
   useEffect(() => {
@@ -112,15 +131,11 @@ export default function App() {
 
   // 3. INSTANT CLIENT START HANDLER (0ms response, zero backend dependency)
   const handleStartClick = () => {
-    // A. Play opening sound immediately (0ms)
     playLaunchCeremonySound();
-
-    // B. Trigger visual opening ceremony (Poppers, Confetti, Sparks, Fireworks, Flash) immediately (0ms)
     triggerLaunchCeremony();
 
-    // C. Calculate local start & end timestamps (24 Hours)
     const nowMs = Date.now();
-    const durationSec = 86400; // 24 Hours
+    const durationSec = 86400;
     const endMs = nowMs + (durationSec * 1000);
 
     const newEventState = {
@@ -130,7 +145,6 @@ export default function App() {
       durationSeconds: durationSec,
     };
 
-    // D. Persist to localStorage across refreshes
     saveStoredEventState(newEventState);
     setEventState(newEventState);
     setStatus('RUNNING');
@@ -173,6 +187,7 @@ export default function App() {
         onToggleSound={handleToggleSound}
         isEventMode={isEventMode}
         onToggleEventMode={handleToggleEventMode}
+        onResetTimer={handleResetTimer}
       />
 
       {/* Main Web Content Layout */}
